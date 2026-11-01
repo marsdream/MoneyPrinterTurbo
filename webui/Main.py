@@ -48,6 +48,7 @@ from app.models.schema import (
 from app.services import bgm as bgm_service
 from app.services import material_upload as material_upload_service
 from app.services import (
+    agnes,
     cache_manager,
     llm,
     loomloom,
@@ -140,6 +141,7 @@ VIDEO_SOURCE_GROUPS = {
         "volcengine_seedance",
         "wavespeed",
         "muapi",
+        "agnes",
     ),
     "ai_image": ("openai_image",),
     "local": ("local",),
@@ -760,6 +762,7 @@ def _initialize_session_state():
         "ofox_confirm_charge": False,
         "metaso_minimax_confirm_charge": False,
         "muapi_confirm_charge": False,
+        "agnes_confirm_charge": False,
         # AI 视频按素材段计费，默认只生成一段，用户确认效果后再主动增加数量。
         "loomloom_video_scene_count": _saved_ui_number(
             "loomloom_video_scene_count",
@@ -4042,6 +4045,38 @@ def _render_settings_dialog():
                     muapi_resolution.strip() or muapi.DEFAULT_RESOLUTION,
                 )
 
+                st.divider()
+                st.markdown(f"**{tr('Agnes AI Video')}**")
+                st.caption(tr("Agnes AI Video Help"))
+                agnes_api_key = st.text_input(
+                    tr("Agnes API Key"),
+                    value=str(config.app.get("agnes_api_key", "") or ""),
+                    type="password",
+                    help=tr("Agnes API Key Help"),
+                    key="agnes_api_key_input",
+                )
+                _set_runtime_config("app", "agnes_api_key", agnes_api_key.strip())
+                configured_agnes_base_url = str(
+                    config.app.get("agnes_base_url", agnes.DEFAULT_BASE_URL)
+                    or agnes.DEFAULT_BASE_URL
+                ).strip()
+                agnes_base_url = st.text_input(
+                    tr("Agnes Base URL"),
+                    value=(
+                        ""
+                        if configured_agnes_base_url == agnes.DEFAULT_BASE_URL
+                        else configured_agnes_base_url
+                    ),
+                    placeholder=agnes.DEFAULT_BASE_URL,
+                    key="agnes_base_url_input",
+                    help=tr("Agnes Base URL Help"),
+                )
+                _set_runtime_config(
+                    "app",
+                    "agnes_base_url",
+                    agnes_base_url.strip() or agnes.DEFAULT_BASE_URL,
+                )
+
 
             with st.container(border=True):
                 st.markdown(f"#### {tr('AI Image Generation APIs')}")
@@ -5224,6 +5259,7 @@ def _render_video_settings(panel, params):
                 "ofox": tr("OFox AI Video"),
                 "metaso_minimax": tr("Metaso MiniMax H3"),
                 "muapi": tr("MuAPI AI Video"),
+                "agnes": tr("Agnes AI Video"),
                 "loomloom": tr("Shengsuan Cloud AI Video"),
                 "openai_image": tr("OpenAI Compatible Text-to-Image"),
                 "local": tr("Local file"),
@@ -5569,6 +5605,8 @@ def _render_video_settings(panel, params):
                 _render_metaso_minimax_video_settings(params)
             if params.video_source == "muapi":
                 _render_muapi_video_settings(params)
+            if params.video_source == "agnes":
+                _render_agnes_video_settings(params)
     return uploaded_files
 
 
@@ -5728,6 +5766,16 @@ def _render_muapi_video_settings(params):
         tr("Confirm MuAPI Charge"),
         key="muapi_confirm_charge",
         help=tr("Confirm MuAPI Charge Help"),
+    )
+
+
+def _render_agnes_video_settings(params):
+    """Show Agnes video settings notice (currently free during beta)."""
+    st.caption(tr("Confirm Agnes Charge Help"))
+    st.checkbox(
+        tr("Confirm Agnes Charge"),
+        key="agnes_confirm_charge",
+        help=tr("Confirm Agnes Charge Help"),
     )
 
 
@@ -8184,6 +8232,20 @@ def _render_generation_controls(
         ):
             _remove_active_generation_task(task_id)
             st.error(tr("Confirm MuAPI Charge Required"))
+            st.stop()
+
+        if params.video_source == "agnes" and not (
+            agnes.is_enabled(config.snapshot_config_with_pending(config.app))
+        ):
+            _remove_active_generation_task(task_id)
+            st.error(tr("Please Enter the Agnes API Key"))
+            st.stop()
+
+        if params.video_source == "agnes" and not st.session_state.get(
+            "agnes_confirm_charge", False
+        ):
+            _remove_active_generation_task(task_id)
+            st.error(tr("Confirm Agnes Charge Required"))
             st.stop()
 
         if params.video_source == "openai_image" and not material.is_openai_image_enabled(
