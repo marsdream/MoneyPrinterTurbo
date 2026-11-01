@@ -23,6 +23,7 @@ from PIL import Image, UnidentifiedImageError
 from app.config import config
 from app.models.schema import ImageMotion, MaterialInfo, VideoAspect, VideoConcatMode
 from app.services import (
+    agnes,
     material_cache,
     material_upload,
     metaso_minimax,
@@ -2245,6 +2246,17 @@ def download_videos(
         # MuAPI 的模型端点会创建异步付费任务。逐段提交并在覆盖配音时长后
         # 停止，避免把未使用的脚本关键词也发送到远端。
         return _download_videos_muapi_on_demand(
+            task_id=task_id,
+            search_terms=search_terms,
+            video_aspect=video_aspect,
+            audio_duration=audio_duration,
+            max_clip_duration=max_clip_duration,
+            material_directory=material_directory,
+        )
+    if source == "agnes":
+        # Agnes Video 2.5 Flash 使用文生视频 API。以脚本片段为 prompt，
+        # 逐个生成素材直至覆盖配音时长。体验期免费。
+        return _download_videos_agnes_on_demand(
             task_id=task_id,
             search_terms=search_terms,
             video_aspect=video_aspect,
