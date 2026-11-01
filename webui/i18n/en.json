@@ -616,6 +616,16 @@
     "Trace API Requests": "Trace API request parameters",
     "Trace API Requests Help": "Independent of log level and off by default. Records redacted parameters, status and timing. Prompts may be visible. Media and response bodies are omitted. Turn off after troubleshooting.",
     "Apply Logging Settings": "Apply logging settings",
-    "Logging Settings Applied": "Logging settings applied to this service."
+    "Logging Settings Applied": "Logging settings applied to this service.",
+    "Agnes AI Video": "Agnes AI Video",
+    "Agnes AI Video Help": "Generate AI video clips through Agnes Video 2.5 Flash (currently FREE during beta).",
+    "Agnes API Key": "Agnes API Key ([Get API Key](https://platform.agnes-ai.com))",
+    "Agnes API Key Help": "Create an Agnes API key and keep it private. Agnes Video 2.5 Flash is currently free.",
+    "Agnes Base URL": "Agnes Base URL",
+    "Agnes Base URL Help": "The API root used for Agnes requests. Default: https://apihub.agnes-ai.com/v1",
+    "Please Enter the Agnes API Key": "Please enter the **Agnes API Key**",
+    "Confirm Agnes Charge": "I understand Agnes video generation (currently free in beta)",
+    "Confirm Agnes Charge Help": "Agnes Video 2.5 Flash is currently free during the beta period.",
+    "Confirm Agnes Charge Required": "Please confirm Agnes usage before generating video."
   }
 }
