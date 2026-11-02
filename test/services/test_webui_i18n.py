@@ -163,6 +163,19 @@ ENGLISH_FALLBACK_KEYS = frozenset(
         "VoxCPM Prompt Pair Required",
         "VoxCPM Prompt Invalid",
         "None (Animation)",
+        "Agnes AI Video",
+        "Agnes AI Video Help",
+        "Agnes API Key",
+        "Agnes API Key Help",
+        "Agnes Base URL",
+        "Agnes Base URL Help",
+        "Confirm Agnes Charge",
+        "Confirm Agnes Charge Help",
+        "Confirm Agnes Charge Required",
+        "Please Enter the Agnes API Key",
+        "Open in Browser",
+        "Opened in Browser",
+        "Failed to Open in Browser",
     }
 )
 FORMAT_PLACEHOLDER_PATTERN = re.compile(r"(?<!\{)\{([a-zA-Z_][a-zA-Z0-9_]*)\}(?!\})")
