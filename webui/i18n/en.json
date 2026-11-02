@@ -626,6 +626,9 @@
     "Please Enter the Agnes API Key": "Please enter the **Agnes API Key**",
     "Confirm Agnes Charge": "I understand Agnes video generation (currently free in beta)",
     "Confirm Agnes Charge Help": "Agnes Video 2.5 Flash is currently free during the beta period.",
-    "Confirm Agnes Charge Required": "Please confirm Agnes usage before generating video."
+    "Confirm Agnes Charge Required": "Please confirm Agnes usage before generating video.",
+    "Open in Browser": "Open in Browser",
+    "Opened in Browser": "Opened in Browser",
+    "Failed to Open in Browser": "Failed to open in browser"
   }
 }

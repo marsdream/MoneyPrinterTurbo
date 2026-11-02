@@ -626,6 +626,9 @@
     "Please Enter the Agnes API Key": "请输入 **Agnes API Key**",
     "Confirm Agnes Charge": "我已了解 Agnes 视频生成（当前体验期免费）",
     "Confirm Agnes Charge Help": "Agnes Video 2.5 Flash 当前处于免费体验期。",
-    "Confirm Agnes Charge Required": "请确认 Agnes 使用后再生成视频。"
+    "Confirm Agnes Charge Required": "请确认 Agnes 使用后再生成视频。",
+    "Open in Browser": "在浏览器中打开",
+    "Opened in Browser": "已在浏览器中打开",
+    "Failed to Open in Browser": "无法在浏览器中打开"
   }
 }

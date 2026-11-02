@@ -1176,6 +1176,12 @@ def _open_task_video(video_file):
         st.session_state["task_preview_video_file"] = normalized_file
         return
 
+    # 桌面端优先用浏览器直接打开视频：浏览器原生支持 mp4/H.264 播放，
+    # 不依赖系统是否安装 QuickTime、VLC 等播放器，也不会把文件交给可能
+    # 未安装解码器的第三方程序。浏览器打不开时再回退到系统默认程序。
+    if _open_video_in_browser(normalized_file):
+        return
+
     try:
         if sys.platform == "darwin":
             subprocess.Popen(["open", normalized_file])
@@ -1185,6 +1191,44 @@ def _open_task_video(video_file):
             subprocess.Popen(["xdg-open", normalized_file])
     except Exception as e:
         logger.error(f"failed to open task video: {normalized_file}, {e}")
+
+
+def _open_video_in_browser(video_file):
+    """用默认浏览器打开视频文件。成功返回 True，失败返回 False。
+
+    file:// 直链交给浏览器后，页面里的 <video> 会直接解码播放。路径仍然
+    限定在任务目录内，避免这个 UI 动作被扩展成任意本地文件打开能力。
+    """
+    tasks_root = os.path.abspath(utils.task_dir())
+    normalized_file = os.path.abspath(video_file)
+    if not normalized_file.startswith(tasks_root + os.sep):
+        logger.warning(f"invalid task video path: {normalized_file}")
+        return False
+    if not os.path.isfile(normalized_file):
+        logger.warning(f"task video does not exist: {normalized_file}")
+        return False
+
+    if _is_headless_server():
+        # 无桌面环境没有可调用的浏览器，改用面板内嵌播放器预览。
+        st.session_state["task_preview_video_file"] = normalized_file
+        return True
+
+    try:
+        url = Path(normalized_file).as_uri()
+    except Exception as e:
+        logger.error(f"failed to build file uri for task video: {e}")
+        return False
+
+    try:
+        opened = webbrowser.open(url)
+    except Exception as e:
+        logger.error(f"failed to open task video in browser: {url}, {e}")
+        return False
+
+    if not opened:
+        logger.warning(f"browser refused to open task video: {url}")
+        return False
+    return True
 
 
 def _delete_task(task_id, task_path, task_state=None):
@@ -2117,6 +2161,20 @@ def _render_generation_task_snapshot(task_id, task):
                             on_click="ignore",
                             use_container_width=True,
                         )
+                    browser_label = tr("Open in Browser")
+                    if len(video_files) > 1:
+                        browser_label = f"{browser_label} {video_index + 1}"
+                    if st.button(
+                        browser_label,
+                        key=f"open_browser_video_{task_id}_{video_index}",
+                        icon=":material/open_in_new:",
+                        help=browser_label,
+                        use_container_width=True,
+                    ):
+                        if _open_video_in_browser(url):
+                            st.toast(tr("Opened in Browser"), icon="🌐")
+                        else:
+                            st.warning(tr("Failed to Open in Browser"))
     except Exception as exc:
         logger.exception(
             f"failed to render generated video preview: task_id={task_id}, "
