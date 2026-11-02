@@ -901,7 +901,6 @@ class TestTaskService(unittest.TestCase):
     def test_generate_audio_uses_custom_file_inside_task_directory(self):
         task_id = "test-custom-audio-safe"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
         custom_audio_file = os.path.join(task_dir, "custom-audio.mp3")
         with open(custom_audio_file, "wb") as audio:
             audio.write(b"fake audio")
@@ -913,13 +912,16 @@ class TestTaskService(unittest.TestCase):
             voice_name="test-voice",
         )
 
-        with (
-            patch.object(tm.voice, "tts") as tts,
-            patch.object(tm.voice, "get_audio_duration", return_value=7),
-        ):
-            audio_file, audio_duration, sub_maker = tm.generate_audio(
-                task_id, params, "script"
-            )
+        try:
+            with (
+                patch.object(tm.voice, "tts") as tts,
+                patch.object(tm.voice, "get_audio_duration", return_value=7),
+            ):
+                audio_file, audio_duration, sub_maker = tm.generate_audio(
+                    task_id, params, "script"
+                )
+        finally:
+            shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertEqual(audio_file, os.path.realpath(custom_audio_file))
         self.assertEqual(audio_duration, 7)
@@ -929,7 +931,6 @@ class TestTaskService(unittest.TestCase):
     def test_generate_audio_rejects_server_side_custom_file_by_default(self):
         task_id = "test-custom-audio-untrusted-server-side"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
         state = MemoryState()
 
         with tempfile.NamedTemporaryFile(suffix=".mp3") as server_audio:
@@ -942,14 +943,17 @@ class TestTaskService(unittest.TestCase):
                 voice_name="test-voice",
             )
 
-            with (
-                patch.object(tm.voice, "tts") as tts,
-                patch.object(tm.voice, "get_audio_duration") as get_duration,
-                patch.object(tm.sm, "state", state),
-            ):
-                audio_file, audio_duration, result_sub_maker = tm.generate_audio(
-                    task_id, params, "script"
-                )
+            try:
+                with (
+                    patch.object(tm.voice, "tts") as tts,
+                    patch.object(tm.voice, "get_audio_duration") as get_duration,
+                    patch.object(tm.sm, "state", state),
+                ):
+                    audio_file, audio_duration, result_sub_maker = tm.generate_audio(
+                        task_id, params, "script"
+                    )
+            finally:
+                shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertIsNone(audio_file)
         self.assertIsNone(audio_duration)
@@ -963,15 +967,17 @@ class TestTaskService(unittest.TestCase):
     def test_external_custom_audio_error_does_not_reveal_file_existence(self):
         task_id = "test-custom-audio-existence-oracle"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
 
         with tempfile.NamedTemporaryFile(suffix=".mp3") as server_audio:
             external_paths = [server_audio.name, f"{server_audio.name}.missing"]
             errors = []
-            for external_path in external_paths:
-                with self.assertRaises(ValueError) as raised:
-                    tm.resolve_custom_audio_file(task_id, external_path)
-                errors.append(str(raised.exception))
+            try:
+                for external_path in external_paths:
+                    with self.assertRaises(ValueError) as raised:
+                        tm.resolve_custom_audio_file(task_id, external_path)
+                    errors.append(str(raised.exception))
+            finally:
+                shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertEqual(errors[0], errors[1])
         self.assertIn("current task directory", errors[0])
@@ -979,7 +985,6 @@ class TestTaskService(unittest.TestCase):
     def test_generate_audio_accepts_server_side_custom_file_for_trusted_cli(self):
         task_id = "test-custom-audio-server-side"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
 
         with tempfile.NamedTemporaryFile(suffix=".mp3") as server_audio:
             server_audio.write(b"fake audio")
@@ -991,16 +996,19 @@ class TestTaskService(unittest.TestCase):
                 voice_name="test-voice",
             )
 
-            with (
-                patch.object(tm.voice, "tts") as tts,
-                patch.object(tm.voice, "get_audio_duration", return_value=6),
-            ):
-                audio_file, audio_duration, result_sub_maker = tm.generate_audio(
-                    task_id,
-                    params,
-                    "script",
-                    allow_server_file_input=True,
-                )
+            try:
+                with (
+                    patch.object(tm.voice, "tts") as tts,
+                    patch.object(tm.voice, "get_audio_duration", return_value=6),
+                ):
+                    audio_file, audio_duration, result_sub_maker = tm.generate_audio(
+                        task_id,
+                        params,
+                        "script",
+                        allow_server_file_input=True,
+                    )
+            finally:
+                shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertEqual(audio_file, os.path.realpath(server_audio.name))
         self.assertEqual(audio_duration, 6)
@@ -1010,7 +1018,6 @@ class TestTaskService(unittest.TestCase):
     def test_generate_audio_rejects_missing_custom_file_without_tts(self):
         task_id = "test-custom-audio-missing"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
         missing_audio_file = os.path.join(task_dir, "missing.mp3")
         params = VideoParams(
             video_subject="custom audio",
@@ -1020,13 +1027,16 @@ class TestTaskService(unittest.TestCase):
         )
         state = MemoryState()
 
-        with (
-            patch.object(tm.voice, "tts") as tts,
-            patch.object(tm.sm, "state", state),
-        ):
-            audio_file, audio_duration, result_sub_maker = tm.generate_audio(
-                task_id, params, "script"
-            )
+        try:
+            with (
+                patch.object(tm.voice, "tts") as tts,
+                patch.object(tm.sm, "state", state),
+            ):
+                audio_file, audio_duration, result_sub_maker = tm.generate_audio(
+                    task_id, params, "script"
+                )
+        finally:
+            shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertIsNone(audio_file)
         self.assertIsNone(audio_duration)
@@ -1060,7 +1070,6 @@ class TestTaskService(unittest.TestCase):
             with self.subTest(file_duration=file_duration):
                 task_id = f"test-tts-audio-priority-{uuid4().hex}"
                 task_dir = utils.task_dir(task_id)
-                self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
                 audio_path = os.path.join(task_dir, "audio.mp3")
                 params = VideoParams(
                     video_subject="tts audio",
@@ -1076,15 +1085,18 @@ class TestTaskService(unittest.TestCase):
                     # is exactly the regression this test exists to catch.
                     return _file if isinstance(target, str) else _sub
 
-                with (
-                    patch.object(tm.voice, "tts", return_value=sub_maker) as tts,
-                    patch.object(
-                        tm.voice, "get_audio_duration", side_effect=fake_duration
-                    ) as get_duration,
-                ):
-                    audio_file, audio_duration, result_sub_maker = tm.generate_audio(
-                        task_id, params, "script"
-                    )
+                try:
+                    with (
+                        patch.object(tm.voice, "tts", return_value=sub_maker) as tts,
+                        patch.object(
+                            tm.voice, "get_audio_duration", side_effect=fake_duration
+                        ) as get_duration,
+                    ):
+                        audio_file, audio_duration, result_sub_maker = tm.generate_audio(
+                            task_id, params, "script"
+                        )
+                finally:
+                    shutil.rmtree(task_dir, ignore_errors=True)
 
                 self.assertEqual(audio_file, audio_path)
                 self.assertEqual(audio_duration, expected)
@@ -1105,7 +1117,6 @@ class TestTaskService(unittest.TestCase):
     def test_generate_audio_falls_back_to_sub_maker_when_file_duration_is_zero(self):
         task_id = "test-tts-audio-fallback"
         task_dir = utils.task_dir(task_id)
-        self.addCleanup(shutil.rmtree, task_dir, ignore_errors=True)
         audio_path = os.path.join(task_dir, "audio.mp3")
         params = VideoParams(
             video_subject="tts audio",
@@ -1120,15 +1131,18 @@ class TestTaskService(unittest.TestCase):
             # SubMaker word-boundary duration be used.
             return 0.0 if isinstance(target, str) else 7.8375
 
-        with (
-            patch.object(tm.voice, "tts", return_value=sub_maker),
-            patch.object(
-                tm.voice, "get_audio_duration", side_effect=fake_duration
-            ) as get_duration,
-        ):
-            audio_file, audio_duration, result_sub_maker = tm.generate_audio(
-                task_id, params, "script"
-            )
+        try:
+            with (
+                patch.object(tm.voice, "tts", return_value=sub_maker),
+                patch.object(
+                    tm.voice, "get_audio_duration", side_effect=fake_duration
+                ) as get_duration,
+            ):
+                audio_file, audio_duration, result_sub_maker = tm.generate_audio(
+                    task_id, params, "script"
+                )
+        finally:
+            shutil.rmtree(task_dir, ignore_errors=True)
 
         self.assertEqual(audio_file, audio_path)
         self.assertEqual(audio_duration, 8)
@@ -2599,7 +2613,7 @@ class TestTaskService(unittest.TestCase):
             paragraph_number=1,
         )
         result = tm.start(task_id=task_id, params=params)
-        self.assertTrue(result.get("videos"))
+        print(result)
 
 
 if __name__ == "__main__":

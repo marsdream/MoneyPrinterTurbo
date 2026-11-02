@@ -22,9 +22,8 @@ def test_task_lookup_does_not_hide_unrelated_redis_errors():
     state = RedisState.__new__(RedisState)
     state._redis = Mock()
     state._redis.hgetall.side_effect = ResponseError("NOAUTH Authentication required")
-    with pytest.raises(ResponseError) as exc_info:
+    with pytest.raises(ResponseError, match="NOAUTH"):
         state.get_task("task-id")
-    assert "NOAUTH" in str(exc_info.value)
 
 
 def test_scan_skips_key_that_changes_type_before_hash_probe():
@@ -43,9 +42,8 @@ def test_scan_does_not_hide_unrelated_probe_errors():
     state._redis.scan.return_value = (0, [b"task-id"])
     pipeline = state._redis.pipeline.return_value.__enter__.return_value
     pipeline.execute.return_value = [ResponseError("NOPERM no permissions")]
-    with pytest.raises(ResponseError) as exc_info:
+    with pytest.raises(ResponseError, match="NOPERM"):
         state.list_task_ids()
-    assert "NOPERM" in str(exc_info.value)
 
 
 @pytest.mark.skipif(not os.getenv("MPT_TEST_REDIS_HOST"), reason="MPT_TEST_REDIS_HOST not set")

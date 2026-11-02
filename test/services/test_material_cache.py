@@ -158,8 +158,6 @@ class TestMaterialSearchCache(unittest.TestCase):
                 search_term="nature",
                 minimum_duration=5,
                 video_aspect=VideoAspect.portrait,
-                # Keep freshness deterministic despite filesystem/clock precision.
-                now=cache_path.stat().st_mtime + 1,
             )
 
         self.assertIsNone(loaded)

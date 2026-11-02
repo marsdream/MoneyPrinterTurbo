@@ -131,12 +131,12 @@ def test_streamlit_media_responses_keep_valid_asgi_headers(media_type):
     from starlette.responses import Response
     from starlette.routing import Route
     from starlette.testclient import TestClient
-    from streamlit.web.server.starlette.starlette_gzip_middleware import SelectiveGZipMiddleware
+    from streamlit.web.server.starlette.starlette_gzip_middleware import MediaAwareGZipMiddleware
 
     async def media(request):
         return Response(b"media payload" * 200, media_type=media_type)
 
-    app = SelectiveGZipMiddleware(Starlette(routes=[Route("/media", media)]))
+    app = MediaAwareGZipMiddleware(Starlette(routes=[Route("/media", media)]))
     with TestClient(app) as client:
         result = client.get("/media", headers={"Accept-Encoding": "gzip"})
     assert result.status_code == 200

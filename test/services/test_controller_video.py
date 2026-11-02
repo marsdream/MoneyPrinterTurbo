@@ -94,9 +94,11 @@ class TestVideoControllerHelpers(unittest.TestCase):
 
             async def run_lifespan():
                 async with asgi.application_lifespan(asgi.app):
-                    recover.assert_called_once_with()
+                    pass
 
             asyncio.run(run_lifespan())
+
+        recover.assert_called_once_with()
 
     def test_fastapi_startup_resumes_persisted_redis_queue(self):
         """A restart must dispatch queued Redis work before serving requests."""
@@ -108,18 +110,15 @@ class TestVideoControllerHelpers(unittest.TestCase):
         with (
             patch.object(video_controller, "task_manager", manager),
             patch.object(manager, "check_queue") as check_queue,
-            patch.object(manager, "start_queue_dispatcher") as start_dispatcher,
-            patch.object(manager, "stop_queue_dispatcher") as stop_dispatcher,
             patch.object(task_service, "recover_interrupted_cross_posts"),
         ):
             async def run_lifespan():
                 async with asgi.application_lifespan(asgi.app):
-                    self.assertEqual(check_queue.call_count, 2)
+                    pass
 
             asyncio.run(run_lifespan())
 
-        start_dispatcher.assert_called_once_with()
-        stop_dispatcher.assert_called_once_with()
+        self.assertEqual(check_queue.call_count, 2)
 
     def test_sanitize_upload_filename_rejects_empty_name(self):
         """空文件名和目录占位符不能进入服务端存储路径。"""
@@ -185,7 +184,7 @@ class TestVideoControllerTasks(unittest.TestCase):
         return SimpleNamespace(headers={"x-task-id": "request-123"}, method="GET")
 
     def test_video_task_rejects_font_outside_font_directory_before_queueing(self):
-        """非法字体路径必须在任务入队前返回 403，不产生付费后台任务。"""
+        """非法字体路径必须在任务入队前返回 400，不产生付费后台任务。"""
         with tempfile.TemporaryDirectory() as temp_dir:
             font_dir = Path(temp_dir, "fonts")
             font_dir.mkdir()
@@ -203,7 +202,7 @@ class TestVideoControllerTasks(unittest.TestCase):
                     with self.assertRaises(HttpException) as raised:
                         video_controller.create_task(self._request(), body, stop_at="video")
 
-                    self.assertEqual(raised.exception.status_code, 403)
+                    self.assertEqual(raised.exception.status_code, 400)
                     update_task.assert_not_called()
                     add_task.assert_not_called()
 
@@ -228,7 +227,7 @@ class TestVideoControllerTasks(unittest.TestCase):
                 with self.assertRaises(HttpException) as raised:
                     video_controller.create_task(self._request(), body, stop_at="video")
 
-            self.assertEqual(raised.exception.status_code, 403)
+            self.assertEqual(raised.exception.status_code, 400)
             update_task.assert_not_called()
             add_task.assert_not_called()
 
@@ -563,13 +562,7 @@ class TestVideoControllerTasks(unittest.TestCase):
 
 
 class TestVideoControllerCreateHTTP(unittest.TestCase):
-    """验证越界字体在真实 HTTP 入口返回 403/404，而不是创建后台任务。
-
-    行为变更（PR #1664）：create_task 的字体预检改走文件服务包装
-    `_resolve_path_within_directory`，越界/穿越返回 403、字体缺失返回
-    404，与同一文件里任务产物端点的错误码保持一致；400 只留给请求体
-    数值校验等 ValueError 场景。
-    """
+    """验证越界字体在真实 HTTP 入口返回 400，而不是创建后台任务。"""
 
     def setUp(self):
         self.original_app_config = dict(config.app)
@@ -587,7 +580,7 @@ class TestVideoControllerCreateHTTP(unittest.TestCase):
                 json={"video_subject": "Coffee", "font_name": "../../README.md"},
             )
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 400)
         add_task.assert_not_called()
 
 

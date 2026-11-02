@@ -62,7 +62,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          pull: true
           push: true
           provenance: mode=max
           sbom: true
